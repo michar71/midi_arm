@@ -12,6 +12,7 @@ String my_port = "/dev/cu.usbserial-12345678";        // choose your port
 float xx, yy, zz;
 float minx,maxx,miny,maxy,minz,maxz;
 boolean isCal;
+boolean isMap;
 MidiBus myBus; // The MidiBus
 int lastUpdate;
 int m1 = 0;
@@ -28,11 +29,8 @@ void setup() {
 
   myPort = new Serial(this, my_port, 115200);
   myPort.bufferUntil('\n');
-
   smooth();
-  
    myBus = new MidiBus(this, -1, "Bus 1"); // Create a new MidiBus with no input device and the default Java Sound Synthesizer as the output device.
-
 }
 
 
@@ -43,6 +41,8 @@ void draw_labels()
   hint(DISABLE_DEPTH_TEST);
   if (isCal)
     fill(255,0,0);
+  else if (isMap)
+     fill(0,255,0);
   else  
     fill(0);
   rect(offsx,offsy,140,30);
@@ -119,6 +119,10 @@ void draw() {
   {
     calc_call_min_max();
   }
+  else if (isMap)
+  {
+    //Do nothin...
+  }
   else
   {
     //limit update rate  
@@ -172,16 +176,45 @@ void serialEvent(Serial myPort) {
 }
 
 void keyPressed() {
-  if (key == 'c')
-  {
-    if (isCal)
+
+    if (key == 'm')
     {
-      isCal = false;
+      if (isCal == false)
+        isMap = !isMap;
+    }
+    
+    if (isMap)
+    {
+      if (key =='1')
+      {
+          ControlChange change1 = new ControlChange(0, 1, 128);
+          myBus.sendControllerChange(change1);
+      }
+      if (key =='2')
+      {
+          ControlChange change1 = new ControlChange(0, 2, 128);
+          myBus.sendControllerChange(change1);
+      }
+      if (key =='3')
+      {
+          ControlChange change1 = new ControlChange(0, 3, 128);
+          myBus.sendControllerChange(change1);
+      }      
     }
     else
     {
-      isCal = true;
-      clear_cal_min_max();
+      if (key == 'c')
+      {
+        if (isCal)
+        {
+          isCal = false;
+        }
+        else
+        {
+          isCal = true;
+          clear_cal_min_max();
+        }
+      }      
     }
-  }
+  
   }
