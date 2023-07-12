@@ -7,7 +7,7 @@ import themidibus.*; //Import the library
 
 
 Serial myPort;                  // The serial port
-String my_port = "/dev/cu.usbserial-12345678";        // choose your port
+String my_port = "/dev/cu.usbserial-0001";        // choose your port
 //String my_port = "/dev/tty.MIDIARM";        // choose your port
 float xx, yy, zz;
 float minx,maxx,miny,maxy,minz,maxz;
@@ -18,6 +18,7 @@ int lastUpdate;
 int m1 = 0;
 int m2 = 0;
 int m3 = 0;
+int ignorelines = 20;
 
 void setup() {
   size(640, 480,P3D);
@@ -28,9 +29,45 @@ void setup() {
   MidiBus.list();
 
   myPort = new Serial(this, my_port, 115200);
-  myPort.bufferUntil('\n');
+  if (myPort != null)
+  {
+    myPort.bufferUntil('\n');
+  }
   smooth();
-   myBus = new MidiBus(this, -1, "Bus 1"); // Create a new MidiBus with no input device and the default Java Sound Synthesizer as the output device.
+  myBus = new MidiBus(this, -1, "Bus 1"); // Create a new MidiBus with no input device and the default Java Sound Synthesizer as the output device.
+   
+  load_settings();
+}
+
+void load_settings()
+{
+  JSONObject json;
+  json = loadJSONObject("setup.json");
+  
+  if (json != null)
+  {
+    maxx = json.getFloat("maxx");
+    minx = json.getFloat("minx");
+    maxy = json.getFloat("maxy");
+    miny = json.getFloat("miny");
+    maxz = json.getFloat("maxz");
+    minz = json.getFloat("minz");
+  }
+}
+
+void save_settings()
+{
+  JSONObject json = new JSONObject();
+
+  json.setFloat("maxx",maxx);
+  json.setFloat("minx",minx);
+  json.setFloat("maxy",maxy);
+  json.setFloat("miny",miny);
+  json.setFloat("maxz",maxz);
+  json.setFloat("minz",minz);
+  
+  saveJSONObject(json,"setup.json");
+  
 }
 
 
@@ -111,7 +148,7 @@ void draw() {
   rotateX(xx);//pitch
   rotateY(zz);//yaw
   rotateZ(yy);//roll
-  box(100, 50, 600);
+  box(600, 50, 100);
   popMatrix();
   draw_labels();
   
@@ -164,13 +201,19 @@ void calc_call_min_max()
 void serialEvent(Serial myPort) {
 
   String myString = myPort.readStringUntil('\n');
-  myString = trim(myString);
-  float sensors[] = float(split(myString, ':'));
+  if (ignorelines == 0)
+  {
+    myString = trim(myString);
+    float sensors[] = float(split(myString, ':'));
   
-  yy = sensors[0];
-  xx = -sensors[1];
-  zz = sensors[2];
-  
+    zz = -sensors[0];
+    yy = -sensors[1];
+    xx = -sensors[2];
+  }
+  else
+  {  
+    ignorelines--;
+  }
   //println("roll: " + xx + " pitch: " + yy + " yaw: " + zz + "\n"); //debug
 
 }
@@ -208,6 +251,7 @@ void keyPressed() {
         if (isCal)
         {
           isCal = false;
+          save_settings();
         }
         else
         {

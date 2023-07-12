@@ -295,8 +295,8 @@ void fuse_data(SF* pFusion,t_RawSensorData* pRawData, t_sensorFusionData* pData)
 
   //WHY DOES THE OVERLL DIRECTION DRIFT BACK TO STHE START POSITION EVEN IF THE COMPASS RAW DATA IS STABLE???? IF WE DON'T USE THE MAG IT WORKS BUT DRIFTS OVER TIME
 
-  //pFusion->MadgwickUpdate(pRawData->gyroX * DEG_TO_RAD, pRawData->gyroY * DEG_TO_RAD, pRawData->gyroZ * DEG_TO_RAD, pRawData->accX, pRawData->accY, pRawData->accZ,pRawData->magX,pRawData->magZ,pRawData->magY, deltat);   
-    pFusion->MadgwickUpdate(pRawData->gyroX * DEG_TO_RAD, pRawData->gyroY * DEG_TO_RAD, pRawData->gyroZ * DEG_TO_RAD, pRawData->accX, pRawData->accY, pRawData->accZ, deltat);    
+  pFusion->MadgwickUpdate(pRawData->gyroX * DEG_TO_RAD, pRawData->gyroY * DEG_TO_RAD, pRawData->gyroZ * DEG_TO_RAD, pRawData->accX, pRawData->accY, pRawData->accZ,pRawData->magX,pRawData->magY,pRawData->magZ, deltat);   
+   // pFusion->MadgwickUpdate(pRawData->gyroX * DEG_TO_RAD, pRawData->gyroY * DEG_TO_RAD, pRawData->gyroZ * DEG_TO_RAD, pRawData->accX, pRawData->accY, pRawData->accZ, deltat);    
 
   //pData->pitch = pFusion->getPitch();
   //pData->roll = pFusion->getRoll();   
