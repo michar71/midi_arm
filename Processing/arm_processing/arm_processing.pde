@@ -118,20 +118,20 @@ void send_midi()
   int number = 0;
   
   number = 1;
-  m1 =(int)map(xx,minx, maxx, 0,255);
-  m1 = limit(m1,0,255);
+  m1 =(int)map(xx,minx, maxx, 0,127);
+  m1 = limit(m1,0,127);
   ControlChange change1 = new ControlChange(channel, number, m1);
   myBus.sendControllerChange(change1);
   
   number = 2;
-  m2 =(int)map(yy,miny, maxy, 0,255);
-  m2 = limit(m2,0,255);
+  m2 =(int)map(yy,miny, maxy, 0,127);
+  m2 = limit(m2,0,127);
   ControlChange change2 = new ControlChange(channel, number, m2);
   myBus.sendControllerChange(change2);
   
   number = 3;
-  m3 =(int)map(zz,minz, maxz, 0,255);
-  m3 = limit(m3,0,255);  
+  m3 =(int)map(zz,minz, maxz, 0,127);
+  m3 = limit(m3,0,127);  
   ControlChange change3 = new ControlChange(channel, number, m3);  
   myBus.sendControllerChange(change3);
 }
@@ -230,17 +230,17 @@ void keyPressed() {
     {
       if (key =='1')
       {
-          ControlChange change1 = new ControlChange(0, 1, 128);
+          ControlChange change1 = new ControlChange(0, 1, 127);
           myBus.sendControllerChange(change1);
       }
       if (key =='2')
       {
-          ControlChange change1 = new ControlChange(0, 2, 128);
+          ControlChange change1 = new ControlChange(0, 2, 127);
           myBus.sendControllerChange(change1);
       }
       if (key =='3')
       {
-          ControlChange change1 = new ControlChange(0, 3, 128);
+          ControlChange change1 = new ControlChange(0, 3, 127);
           myBus.sendControllerChange(change1);
       }      
     }
