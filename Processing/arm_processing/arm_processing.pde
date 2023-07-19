@@ -162,7 +162,7 @@ void send_buttons()
   if ((last_A_state == false) && (b_A_state == true))
   {
     last_A_state = b_A_state;
-    ControlChange change1 = new ControlChange(0, 4, 127);
+    ControlChange change1 = new ControlChange(0, 4, 1);
     myBus.sendControllerChange(change1);
   }
 
@@ -176,7 +176,7 @@ void send_buttons()
   if ((last_B_state == false) && (b_B_state == true))
   {
     last_B_state = b_B_state;
-    ControlChange change1 = new ControlChange(0, 5, 127);
+    ControlChange change1 = new ControlChange(0, 5, 1);
     myBus.sendControllerChange(change1);
   }
 
@@ -190,7 +190,7 @@ void send_buttons()
   if ((last_C_state == false) && (b_C_state == true))
   {
     last_C_state = b_C_state;
-    ControlChange change1 = new ControlChange(0, 6, 127);
+    ControlChange change1 = new ControlChange(0, 6, 1);
     myBus.sendControllerChange(change1);
   }
 
@@ -334,32 +334,32 @@ void keyPressed() {
     {
       if (key =='1')
       {
-          ControlChange change1 = new ControlChange(0, 1, 127);
+          ControlChange change1 = new ControlChange(0, 1, 63);
           myBus.sendControllerChange(change1);
       }
       if (key =='2')
       {
-          ControlChange change1 = new ControlChange(0, 2, 127);
+          ControlChange change1 = new ControlChange(0, 2, 63);
           myBus.sendControllerChange(change1);
       }
       if (key =='3')
       {
-          ControlChange change1 = new ControlChange(0, 3, 127);
+          ControlChange change1 = new ControlChange(0, 3, 63);
           myBus.sendControllerChange(change1);
       }   
       if (key =='4')
       {
-          ControlChange change1 = new ControlChange(0, 4, 127);
+          ControlChange change1 = new ControlChange(0, 4, 1);
           myBus.sendControllerChange(change1);
       }
       if (key =='5')
       {
-          ControlChange change1 = new ControlChange(0, 5, 127);
+          ControlChange change1 = new ControlChange(0, 5, 1);
           myBus.sendControllerChange(change1);
       }
       if (key =='6')
       {
-          ControlChange change1 = new ControlChange(0, 6, 127);
+          ControlChange change1 = new ControlChange(0, 6, 1);
           myBus.sendControllerChange(change1);
       }        
     }
