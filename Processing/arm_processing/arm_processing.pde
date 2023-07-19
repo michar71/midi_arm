@@ -10,6 +10,7 @@ Serial myPort;                  // The serial port
 String my_port = "/dev/cu.usbmodem145101";        // choose your port
 //String my_port = "/dev/tty.MIDIARM";        // choose your port
 float xx, yy, zz;
+float cx,cy,cz;
 float minx,maxx,miny,maxy,minz,maxz;
 boolean isCal;
 boolean isMap;
@@ -92,9 +93,9 @@ void draw_labels()
     fill(0);
   rect(offsx,offsy,140,40);
   fill(255);
-  text(xx,5+offsx,10+offsy);
-  text(yy,5+offsx,20+offsy);
-  text(zz,5+offsx,30+offsy);
+  text(cx,5+offsx,10+offsy);
+  text(cy,5+offsx,20+offsy);
+  text(cz,5+offsx,30+offsy);
   text(minx+"/"+maxx,50+offsx,10+offsy);
   text(miny+"/"+maxy,50+offsx,20+offsy);
   text(minz+"/"+maxz,50+offsx,30+offsy);
@@ -136,19 +137,19 @@ void send_midi()
   int number = 0;
   
   number = 1;
-  m1 =(int)map(xx,minx, maxx, 0,127);
+  m1 =(int)map(cx,minx, maxx, 0,127);
   m1 = limit(m1,0,127);
   ControlChange change1 = new ControlChange(channel, number, m1);
   myBus.sendControllerChange(change1);
   
   number = 2;
-  m2 =(int)map(yy,miny, maxy, 0,127);
+  m2 =(int)map(cy,miny, maxy, 0,127);
   m2 = limit(m2,0,127);
   ControlChange change2 = new ControlChange(channel, number, m2);
   myBus.sendControllerChange(change2);
   
   number = 3;
-  m3 =(int)map(zz,minz, maxz, 0,127);
+  m3 =(int)map(cz,minz, maxz, 0,127);
   m3 = limit(m3,0,127);  
   ControlChange change3 = new ControlChange(channel, number, m3);  
   myBus.sendControllerChange(change3);
@@ -159,42 +160,42 @@ void send_buttons()
 {
 
   if ((last_A_state == false) && (b_A_state == true))
-  (
+  {
     last_A_state = b_A_state;
     ControlChange change1 = new ControlChange(0, 4, 127);
     myBus.sendControllerChange(change1);
   }
 
   else if ((last_A_state == true) && (b_A_state == false))
-  (
+  {
     last_A_state = b_A_state;
     ControlChange change1 = new ControlChange(0, 4, 0);
     myBus.sendControllerChange(change1);
   }
 
   if ((last_B_state == false) && (b_B_state == true))
-  (
+  {
     last_B_state = b_B_state;
     ControlChange change1 = new ControlChange(0, 5, 127);
     myBus.sendControllerChange(change1);
   }
 
   else if ((last_B_state == true) && (b_B_state == false))
-  (
+  {
     last_B_state = b_B_state;
     ControlChange change1 = new ControlChange(0, 5, 0);
     myBus.sendControllerChange(change1);
   }
   
   if ((last_C_state == false) && (b_C_state == true))
-  (
+  {
     last_C_state = b_C_state;
     ControlChange change1 = new ControlChange(0, 6, 127);
     myBus.sendControllerChange(change1);
   }
 
   else if ((last_C_state == true) && (b_C_state == false))
-  (
+  {
     last_C_state = b_C_state;
     ControlChange change1 = new ControlChange(0, 6, 0);
     myBus.sendControllerChange(change1);
@@ -211,9 +212,10 @@ void draw() {
   noStroke();
   translate(width/2, height/2);
   pushMatrix();
+  rotateZ(yy);//roll
   rotateX(xx);//pitch
   rotateY(zz);//yaw
-  rotateZ(yy);//roll
+
   box(100, 50, 600);
   popMatrix();
   draw_labels();
@@ -250,18 +252,18 @@ void clear_cal_min_max()
 
 void calc_call_min_max()
 {
-  if (xx<minx)
-    minx = xx;
-  if (maxx<xx)
-    maxx=xx;
-  if (yy<miny)
-    miny = yy;
-  if (maxy<yy)
-    maxy=yy;
-  if (zz<minz)
-    minz = zz;
-  if (maxz<zz)
-    maxz=zz;
+  if (cx<minx)
+    minx = cx;
+  if (maxx<cx)
+    maxx=cx;
+  if (cy<miny)
+    miny = cy;
+  if (maxy<cy)
+    maxy=cy;
+  if (cz<minz)
+    minz = cz;
+  if (maxz<cz)
+    maxz=cz;
     
 }
 
@@ -288,6 +290,9 @@ void serialEvent(Serial myPort) {
       yy = -sensors[0];
       xx = sensors[1];
       zz = -sensors[2];      
+      cx = xx + 10;
+      cy = yy + 10;
+      cz = zz + 10;
       v2 = sensors[4];
       v3 = sensors[5];
       v4 = sensors[6];  
