@@ -7,7 +7,7 @@ import themidibus.*; //Import the library
 
 
 Serial myPort;                  // The serial port
-String my_port = "/dev/cu.usbserial-0001";        // choose your port
+String my_port = "/dev/cu.usbmodem145101";        // choose your port
 //String my_port = "/dev/tty.MIDIARM";        // choose your port
 float xx, yy, zz;
 float minx,maxx,miny,maxy,minz,maxz;
@@ -19,6 +19,14 @@ int m1 = 0;
 int m2 = 0;
 int m3 = 0;
 int ignorelines = 20;
+boolean isLive = true;
+boolean b_A_state = false;
+boolean b_B_state = false;
+boolean b_C_state = false;
+boolean last_A_state = false;
+boolean last_B_state = false;
+boolean last_C_state = false;
+
 
 void setup() {
   size(640, 480,P3D);
@@ -82,7 +90,7 @@ void draw_labels()
      fill(0,255,0);
   else  
     fill(0);
-  rect(offsx,offsy,140,30);
+  rect(offsx,offsy,140,40);
   fill(255);
   text(xx,5+offsx,10+offsy);
   text(yy,5+offsx,20+offsy);
@@ -94,6 +102,16 @@ void draw_labels()
   text(m1,110+offsx,10+offsy);
   text(m2,110+offsx,20+offsy);
   text(m3,110+offsx,30+offsy);
+  
+  if (b_A_state)
+    text("A", 5+offsx,40+offsy);
+  
+  if (b_B_state)
+    text("B", 20+offsx,40+offsy);
+    
+  if (b_C_state)
+    text("C", 35+offsx,40+offsy);
+    
   hint(ENABLE_DEPTH_TEST);
 }
 
@@ -136,6 +154,54 @@ void send_midi()
   myBus.sendControllerChange(change3);
 }
 
+
+void send_buttons()
+{
+
+  if ((last_A_state == false) && (b_A_state == true))
+  (
+    last_A_state = b_A_state;
+    ControlChange change1 = new ControlChange(0, 4, 127);
+    myBus.sendControllerChange(change1);
+  }
+
+  else if ((last_A_state == true) && (b_A_state == false))
+  (
+    last_A_state = b_A_state;
+    ControlChange change1 = new ControlChange(0, 4, 0);
+    myBus.sendControllerChange(change1);
+  }
+
+  if ((last_B_state == false) && (b_B_state == true))
+  (
+    last_B_state = b_B_state;
+    ControlChange change1 = new ControlChange(0, 5, 127);
+    myBus.sendControllerChange(change1);
+  }
+
+  else if ((last_B_state == true) && (b_B_state == false))
+  (
+    last_B_state = b_B_state;
+    ControlChange change1 = new ControlChange(0, 5, 0);
+    myBus.sendControllerChange(change1);
+  }
+  
+  if ((last_C_state == false) && (b_C_state == true))
+  (
+    last_C_state = b_C_state;
+    ControlChange change1 = new ControlChange(0, 6, 127);
+    myBus.sendControllerChange(change1);
+  }
+
+  else if ((last_C_state == true) && (b_C_state == false))
+  (
+    last_C_state = b_C_state;
+    ControlChange change1 = new ControlChange(0, 6, 0);
+    myBus.sendControllerChange(change1);
+  }  
+}
+
+
 void draw() {
 
   background(0);
@@ -148,7 +214,7 @@ void draw() {
   rotateX(xx);//pitch
   rotateY(zz);//yaw
   rotateZ(yy);//roll
-  box(600, 50, 100);
+  box(100, 50, 600);
   popMatrix();
   draw_labels();
   
@@ -167,6 +233,7 @@ void draw() {
     {
       lastUpdate = millis();
       send_midi();
+      send_buttons();
     }
   }
 }
@@ -200,15 +267,47 @@ void calc_call_min_max()
 
 void serialEvent(Serial myPort) {
 
+  float v1,v2,v3,v4;
   String myString = myPort.readStringUntil('\n');
   if (ignorelines == 0)
   {
     myString = trim(myString);
     float sensors[] = float(split(myString, ':'));
   
-    zz = -sensors[0];
-    yy = -sensors[1];
-    xx = -sensors[2];
+    v1 = sensors[3];
+    if (v1 == 0)
+    {
+      isLive = false;
+      b_A_state = false;
+      b_B_state = false;
+      b_C_state = false;
+    }
+    else
+    {
+      isLive = true;
+      yy = -sensors[0];
+      xx = sensors[1];
+      zz = -sensors[2];      
+      v2 = sensors[4];
+      v3 = sensors[5];
+      v4 = sensors[6];  
+      
+      
+      if (v2 == 0)
+        b_A_state = false;
+      else
+        b_A_state = true;
+        
+      if (v3 == 0)
+        b_B_state = false;
+      else
+        b_B_state = true;
+        
+      if (v4 == 0)
+        b_C_state = false;
+      else
+        b_C_state = true;         
+    }
   }
   else
   {  
@@ -242,7 +341,22 @@ void keyPressed() {
       {
           ControlChange change1 = new ControlChange(0, 3, 127);
           myBus.sendControllerChange(change1);
-      }      
+      }   
+      if (key =='4')
+      {
+          ControlChange change1 = new ControlChange(0, 4, 127);
+          myBus.sendControllerChange(change1);
+      }
+      if (key =='5')
+      {
+          ControlChange change1 = new ControlChange(0, 5, 127);
+          myBus.sendControllerChange(change1);
+      }
+      if (key =='6')
+      {
+          ControlChange change1 = new ControlChange(0, 6, 127);
+          myBus.sendControllerChange(change1);
+      }        
     }
     else
     {
