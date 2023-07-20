@@ -17,6 +17,7 @@
 //Sensor Stuff
 //------------
 MPU9250 mpu;
+setup_t settings;
 
 
 //I2C Stuff
@@ -55,6 +56,133 @@ CRGB leds[NUM_LEDS];
 
 
 ButtonClass but_ctrl(BUT_CTRL,false);
+
+
+//---------------------------------
+//--  Settings Stuff  -------------
+//---------------------------------
+void print_settings()
+{     
+    Serial.println("Settings");
+    Serial.println("--------");
+    Serial.print(settings.magic0);
+    Serial.print(settings.magic1);
+    Serial.print(settings.magic2);
+    Serial.print(settings.magic3);
+    Serial.print(settings.magic4);  
+    Serial.println("--------");              
+    Serial.print("Acc Bias X: ");
+    Serial.println(settings.acc_bias_x);
+    Serial.print("Acc Bias Y: ");
+    Serial.println(settings.acc_bias_y);
+    Serial.print("Acc Bias Z: ");
+    Serial.println(settings.acc_bias_z);    
+    Serial.println("");
+    Serial.print("Gyro Bias X: ");
+    Serial.println(settings.gyro_bias_x);
+    Serial.print("Gyro Bias Y: ");
+    Serial.println(settings.gyro_bias_y);
+    Serial.print("Gyro Bias Z: ");
+    Serial.println(settings.gyro_bias_z);    
+    Serial.println("");
+    Serial.print("Mag Bias X: ");
+    Serial.println(settings.mag_bias_x);
+    Serial.print("Mag Bias Y: ");
+    Serial.println(settings.mag_bias_y);
+    Serial.print("Mag Bias Z: ");
+    Serial.println(settings.mag_bias_z);    
+    Serial.println("");
+    Serial.print("Mag Scale X: ");
+    Serial.println(settings.mag_scale_x);
+    Serial.print("Mag Scale Y: ");
+    Serial.println(settings.mag_scale_y);
+    Serial.print("Mag Scale Z X: ");
+    Serial.println(settings.mag_scale_z);    
+    Serial.println("");    
+
+}
+
+void init_settings_acc_gyro()
+{
+  settings.magic0 = 'M';
+  settings.magic1 = 'A';
+  settings.magic2 = 'G';
+  settings.magic3 = 'I';
+  settings.magic4 = 'C';
+  settings.acc_bias_x = 0;
+  settings.acc_bias_y = 0;
+  settings.acc_bias_z = 0;
+  settings.gyro_bias_x = 0;
+  settings.gyro_bias_y = 0;
+  settings.gyro_bias_z = 0;
+}
+
+void init_settings_mag()
+{
+  settings.mag_bias_x = 0;
+  settings.mag_bias_y = 0;
+  settings.mag_bias_z = 0;
+  settings.mag_scale_x = 1;
+  settings.mag_scale_y = 1;
+  settings.mag_scale_z = 1;
+}
+
+void save_settings()
+{
+    uint16_t ii;
+    uint8_t* pData;
+
+    settings.acc_bias_x = mpu.getAccBiasX();
+    settings.acc_bias_y = mpu.getAccBiasY();
+    settings.acc_bias_z = mpu.getAccBiasZ();
+    settings.gyro_bias_x = mpu.getGyroBiasX();
+    settings.gyro_bias_y = mpu.getGyroBiasY();
+    settings.gyro_bias_z = mpu.getGyroBiasZ();
+    settings.mag_bias_x = mpu.getMagBiasX();
+    settings.mag_bias_y = mpu.getMagBiasY();
+    settings.mag_bias_z = mpu.getMagBiasZ();
+    settings.mag_scale_x = mpu.getMagScaleX();
+    settings.mag_scale_y = mpu.getMagScaleY();
+    settings.mag_scale_z = mpu.getMagScaleZ();
+
+    EEPROM.put(0,settings);
+    /*
+    pData = (uint8_t*)&settings;
+
+    for (ii=0;ii<sizeof(setup_t);ii++)
+    {
+        EEPROM.write(ii,*pData);
+        pData++;
+    }
+    */
+    EEPROM.commit();
+    //print_settings();
+}
+
+void load_settings()
+{
+    uint16_t ii;
+
+    EEPROM.get(0,settings);
+    /*
+    uint8_t* pData;
+    pData = (uint8_t*)&settings;
+
+    for (ii=0;ii<sizeof(setup_t);ii++)
+    {
+        *pData = EEPROM.read(ii);
+        pData++;
+    }
+    */
+                  
+#ifndef DEBUG  
+    print_settings();    
+#endif
+  mpu.setAccBias(settings.acc_bias_x ,settings.acc_bias_y ,settings.acc_bias_z);
+  mpu.setGyroBias(settings.gyro_bias_x,settings.gyro_bias_y,settings.gyro_bias_z);
+  mpu.setMagBias(settings.mag_bias_x,settings.mag_bias_y,settings.mag_bias_z);
+  mpu.setMagScale(settings.mag_scale_x,settings.mag_scale_y,settings.mag_scale_z);
+}
 
 
 
@@ -174,6 +302,7 @@ void setup()
     pinMode(BUT_B,INPUT_PULLUP);
     pinMode(BUT_C,INPUT_PULLUP);            
     delay(10);
+    EEPROM.begin(1024);
     
   #ifdef DEBUG
     Serial.println("Pin Setup Done...");
@@ -202,10 +331,39 @@ void setup()
     }
     delay(10);
 
+
   #ifdef DEBUG
     Serial.println("Sensor Setup Done...");
-  #endif
+  #endif    
 
+    load_settings();
+    if ((settings.magic0 == 'M') && (settings.magic1 == 'A') && (settings.magic2 == 'G') && (settings.magic3 == 'I') && (settings.magic4 == 'C'))
+    {
+      delay(400);
+      setLED(0,0,64,0);
+      delay(400);
+      setLED(0,0,0,0);
+
+  #ifdef DEBUG
+    Serial.println("Sensor Calib Load Done...");
+    print_settings();
+  #endif      
+    }
+    else
+    {
+      init_settings_acc_gyro();
+      init_settings_mag();
+      save_settings();
+      delay(400);
+      setLED(0,64,0,0);
+      delay(400);
+      setLED(0,0,0,0);
+
+  #ifdef DEBUG
+    Serial.println("Sensor Calib Load Failed...");
+    print_settings();
+  #endif
+    }
 
   #ifdef DEBUG
     Serial.println("Setup Done...");
@@ -226,16 +384,27 @@ void loop()
   {
     setLED(1,0,0,255);
     delay(500);
+    init_settings_acc_gyro();
     mpu.calibrateAccelGyro();
     delay(300);
-
+    save_settings();
+  #ifdef DEBUG    
+    Serial.println("Sensor Calib Gyro/Acc Done...");
+    print_settings();
+  #endif  
   }
   else if (button_res == VERY_LONG_PRESS)
   {
     setLED(1,0,255,255);
     delay(1000);
+    init_settings_mag();
     mpu.calibrateMag();
     delay(300);
+    save_settings();    
+  #ifdef DEBUG    
+    Serial.println("Sensor Calib Mag Done...");
+    print_settings();
+  #endif      
   }
 
   but_ctrl_state = isLive;
@@ -256,7 +425,7 @@ void loop()
           but_c_state = false;
         else
           but_c_state = true;   
-                  
+
         if (isLive)
         {
           send_processing_data(true);
