@@ -6,6 +6,9 @@ import processing.serial.*;     // import the Processing serial library
 import themidibus.*; //Import the library
 import java.lang.*;
 import java.util.*;
+import controlP5.*;
+
+ControlP5 cp5;
 
 Serial myPort;                  // The serial port
 String my_port = "/dev/cu.usbmodem145101";        // choose your port
@@ -22,7 +25,7 @@ MidiBus myBus; // The MidiBus
 int m1 = 0;
 int m2 = 0;
 int m3 = 0;
-int ignorelines = 20;
+int ignorelines = 0;
 boolean isLive = true;
 boolean b_A_state = false;
 boolean b_B_state = false;
@@ -35,6 +38,11 @@ boolean isConnected = false;
 
 int lastUpdate = 0;
 int lastSerial = 0;
+
+int min_ver = 0;
+int maj_ver = 0;
+String deviceName = "";
+boolean isValidDevice=false;
 
 boolean get_usbmodem_list(ArrayList<String> list)
 {
@@ -77,6 +85,11 @@ boolean try_to_open(String comport)
 {
   try
   {
+    if (myPort !=null)
+    {
+      myPort.stop();
+      myPort = null;
+    }
     myPort = new Serial(this, comport, 115200);
     if (myPort != null)
     {
@@ -97,18 +110,22 @@ boolean try_to_open(String comport)
 
 
 
-boolean ping_usbmodem(String ID)
+boolean ping_usbmodem()
 {
-  //Do query up to 10 times
-    //Send Query
-    
-    //Wait for Answer
-    
-    //It timeout
-      //Return false
-    //else
-      //Store Answer
-      return true;
+  
+  int maxping = 20;
+  isValidDevice = false;
+   for(int ii=0;ii<maxping;ii++)
+   {
+     myPort.write('Q');
+     println("Query Sent"+ii);
+     //We need to figure out how to do this right
+     //Need to be ablew to identify different types of BABOIs
+     if (isValidDevice)
+        return true;
+   }
+   isValidDevice = true;
+   return true;
 }
 
 
@@ -116,7 +133,7 @@ boolean try_connect_usb_modem()
 {
   boolean hasList = false;
   boolean isOpen = false;
-  boolean isRightModem = false;
+
   ArrayList<String> Seriallist = new ArrayList<String>();
   //Build a list of all USB Modems
   
@@ -128,16 +145,11 @@ boolean try_connect_usb_modem()
  for (int ii = 0;ii < Seriallist.size();ii++)
  {
    isOpen = false;
-   isRightModem=false;
    //Try to open Serial Port
    isOpen = try_to_open(Seriallist.get(ii));
    if (isOpen)
    {
-     isRightModem = ping_usbmodem("BABOI");
-     if (isRightModem)
-       return true;
-     else
-       return false;
+     return ping_usbmodem();
    }
  }
  return false;
@@ -148,12 +160,56 @@ boolean try_connect_usb_modem()
 void setup() {
   size(640, 480,P3D);
   
+  cp5 = new ControlP5(this);
+  
+  // create a new button with name 'buttonA'
+  cp5.addButton("Range")
+     .setBroadcast(false)
+     .setValue(0)
+     .setPosition(width-110,10)
+     .setSize(100,18)
+     .setBroadcast(true)
+     ;
+  
+  // and add another 2 buttons
+  cp5.addButton("Map")
+     .setBroadcast(false)
+     .setValue(100)
+     .setPosition(width-110,30)
+     .setSize(100,18)
+     .setBroadcast(true)
+     ;
+  
   MidiBus.list();
   myBus = new MidiBus(this, -1, "Bus 1"); // Create a new MidiBus with no input device and the default MacOS Midi Distributor as output
    
   load_settings();
   
   smooth();
+}
+
+int c;
+
+// function colorA will receive changes from 
+// controller with name colorA
+public void Range(int theValue) {
+        if (isCal)
+        {
+          isCal = false;
+          save_settings();
+        }
+        else
+        {
+          isCal = true;
+          clear_cal_min_max();
+        }
+}
+
+// function colorB will receive changes from 
+// controller with name colorB
+public void Map(int theValue) {
+        if (isCal == false)
+        isMap = !isMap;
 }
 
 void load_settings()
@@ -182,9 +238,7 @@ void save_settings()
   json.setFloat("miny",miny);
   json.setFloat("maxz",maxz);
   json.setFloat("minz",minz);
-  
   saveJSONObject(json,"setup.json");
-  
 }
 
 
@@ -210,8 +264,8 @@ void save_settings()
   
 void draw_labels()
 {
-  int offsx = -width/2;
-  int offsy = -height/2;
+  int offsx = 10;
+  int offsy = 10;
   hint(DISABLE_DEPTH_TEST);
   if (isCal)
     fill(255,0,0);
@@ -219,7 +273,7 @@ void draw_labels()
      fill(0,255,0);
   else  
     fill(0);
-  rect(offsx,offsy,140,40);
+  rect(10,10,140,40);
   fill(255);
   text(cx,5+offsx,10+offsy);
   text(cy,5+offsx,20+offsy);
@@ -241,6 +295,7 @@ void draw_labels()
   if (b_C_state)
     text("C", 35+offsx,40+offsy);
     
+
   hint(ENABLE_DEPTH_TEST);
 }
 
@@ -334,13 +389,13 @@ void send_buttons()
 
 void draw_cube()
 {
+
   float dirY = (((float)height/4*3) / float(height) - 0.5) * 2;
   float dirX = (((float)width/4*3) / float(width) - 0.5) * 2;
   directionalLight(204, 204, 204, -dirX, -dirY, -1); //Why is this linked to the mouse? 
   noStroke();
-  translate(width/2, height/2);
   pushMatrix();
-  
+  translate(width/2, height/2);
   /*
   PMatrix3D rm = new PMatrix3D();
   rm = toMatrix(rm,qx,qy,qz,qw);
@@ -354,6 +409,7 @@ void draw_cube()
   box(200, 200, 200);
   
   popMatrix();
+
 }
 
 
@@ -379,7 +435,8 @@ boolean check_timeout()
     // Clear the buffer, or available() will still be > 0
     myPort.clear();
     // Close the port
-      myPort.stop();
+    myPort.stop();
+    println("TIMEOUT");
     return false;
   }
   else
@@ -388,7 +445,15 @@ boolean check_timeout()
 
 void draw() 
 {
-  background(0);
+  if (isLive)
+    background(0);
+  else
+    background(255,0,0);
+  //if (isConnected)
+  //  println("CONNECTED");
+  //else
+  //  println("NOT CONNECTED");
+    
   if (isConnected)
   {
     draw_cube();
@@ -451,10 +516,25 @@ void serialEvent(Serial myPort) {
 
   float v1,v2,v3,v4;
   String myString = myPort.readStringUntil('\n');
+  //println(myString);
   if (ignorelines == 0)
   {
     myString = trim(myString);
-    float sensors[] = float(split(myString, ':'));
+    String[] list = split(myString, ':');
+    
+    if (list[0].contains("BABOI"))
+    {
+      
+      deviceName = list[0];
+      maj_ver = parseInt(list[1]);
+      min_ver = parseInt(list[2]);
+      println(deviceName+":"+maj_ver+"."+min_ver);
+      isValidDevice = true;
+      return;
+    }
+    
+    
+    float sensors[] = float(list);
   
     v1 = sensors[6];
     if (v1 == 0)
