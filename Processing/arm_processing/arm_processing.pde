@@ -4,18 +4,21 @@ This code is made for processing https://processing.org/
 
 import processing.serial.*;     // import the Processing serial library
 import themidibus.*; //Import the library
-
+import java.lang.*;
+import java.util.*;
 
 Serial myPort;                  // The serial port
 String my_port = "/dev/cu.usbmodem145101";        // choose your port
 //String my_port = "/dev/tty.MIDIARM";        // choose your port
 float xx, yy, zz;
 float cx,cy,cz;
+float qx,qy,qz,qw;
+float accx,accy,accz;
 float minx,maxx,miny,maxy,minz,maxz;
 boolean isCal;
 boolean isMap;
 MidiBus myBus; // The MidiBus
-int lastUpdate;
+
 int m1 = 0;
 int m2 = 0;
 int m3 = 0;
@@ -28,24 +31,129 @@ boolean last_A_state = false;
 boolean last_B_state = false;
 boolean last_C_state = false;
 
+boolean isConnected = false;
 
+int lastUpdate = 0;
+int lastSerial = 0;
+
+boolean get_usbmodem_list(ArrayList<String> list)
+{
+
+  String substring = "usbmodem";
+   
+  try 
+  {
+    //printArray(Serial.list());
+    int i = Serial.list().length;
+    if (i != 0) 
+    {
+    //Buil a list of all the USB Modems
+      for (int j = 0; j < i;j++) 
+      {
+        if (Serial.list()[j].contains(substring) == true)
+        {
+          list.add(Serial.list()[j]);
+        }
+      }
+      println(list);
+      return true;
+    }
+    else
+    {
+      println("No Serial Port Found");
+      return false;
+    }
+    
+  }
+  catch (Exception e)
+  { //Print the type of error
+    println("Serial List Error:", e);
+    return false;  //Tried to connect but no success... Maybe already used?
+  }
+}
+
+
+boolean try_to_open(String comport)
+{
+  try
+  {
+    myPort = new Serial(this, comport, 115200);
+    if (myPort != null)
+    {
+      myPort.bufferUntil('\n');
+      return true;
+    }
+    else 
+    {
+      return false; //No Serial Port device detected at all...
+    }
+  }
+  catch (Exception e)
+  { //Print the type of error
+    println("Serial Open Error:", e);
+    return false;  //Tried to connect but no success... Maybe already used?
+  }  
+}
+
+
+
+boolean ping_usbmodem(String ID)
+{
+  //Do query up to 10 times
+    //Send Query
+    
+    //Wait for Answer
+    
+    //It timeout
+      //Return false
+    //else
+      //Store Answer
+      return true;
+}
+
+
+boolean try_connect_usb_modem()
+{
+  boolean hasList = false;
+  boolean isOpen = false;
+  boolean isRightModem = false;
+  ArrayList<String> Seriallist = new ArrayList<String>();
+  //Build a list of all USB Modems
+  
+  hasList = get_usbmodem_list(Seriallist);
+  if (hasList == false)
+    return false;
+  
+ //Loop Through List
+ for (int ii = 0;ii < Seriallist.size();ii++)
+ {
+   isOpen = false;
+   isRightModem=false;
+   //Try to open Serial Port
+   isOpen = try_to_open(Seriallist.get(ii));
+   if (isOpen)
+   {
+     isRightModem = ping_usbmodem("BABOI");
+     if (isRightModem)
+       return true;
+     else
+       return false;
+   }
+ }
+ return false;
+}
+
+
+      
 void setup() {
   size(640, 480,P3D);
   
-  // List all the available serial ports:
-  printArray(Serial.list());
-  println();
   MidiBus.list();
-
-  myPort = new Serial(this, my_port, 115200);
-  if (myPort != null)
-  {
-    myPort.bufferUntil('\n');
-  }
-  smooth();
-  myBus = new MidiBus(this, -1, "Bus 1"); // Create a new MidiBus with no input device and the default Java Sound Synthesizer as the output device.
+  myBus = new MidiBus(this, -1, "Bus 1"); // Create a new MidiBus with no input device and the default MacOS Midi Distributor as output
    
   load_settings();
+  
+  smooth();
 }
 
 void load_settings()
@@ -80,6 +188,26 @@ void save_settings()
 }
 
 
+
+  PMatrix3D toMatrix(float x,float y, float z, float w) {
+    return toMatrix(new PMatrix3D(),x,y,z,w);
+  }
+  
+ PMatrix3D toMatrix(PMatrix3D out,float x, float y, float z,float w) 
+ {
+    float x2 = x + x; float y2 = y + y; float z2 = z + z;
+    float xsq2 = x * x2; float ysq2 = y * y2; float zsq2 = z * z2;
+    float xy2 = x * y2; float xz2 = x * z2; float yz2 = y * z2;
+    float wx2 = w * x2; float wy2 = w * y2; float wz2 = w * z2;
+    out.set(
+      1.0 - (ysq2 + zsq2), xy2 - wz2, xz2 + wy2, 0.0,
+      xy2 + wz2, 1.0 - (xsq2 + zsq2), yz2 - wx2, 0.0,
+      xz2 - wy2, yz2 + wx2, 1.0 - (xsq2 + ysq2), 0.0,
+      0.0, 0.0, 0.0, 1.0);
+    return out;
+  }
+  
+  
 void draw_labels()
 {
   int offsx = -width/2;
@@ -203,40 +331,92 @@ void send_buttons()
 }
 
 
-void draw() {
 
-  background(0);
-  float dirY = (mouseY / float(height) - 0.5) * 2;
-  float dirX = (mouseX / float(width) - 0.5) * 2;
-  directionalLight(204, 204, 204, -dirX, -dirY, -1); 
+void draw_cube()
+{
+  float dirY = (((float)height/4*3) / float(height) - 0.5) * 2;
+  float dirX = (((float)width/4*3) / float(width) - 0.5) * 2;
+  directionalLight(204, 204, 204, -dirX, -dirY, -1); //Why is this linked to the mouse? 
   noStroke();
   translate(width/2, height/2);
   pushMatrix();
+  
+  /*
+  PMatrix3D rm = new PMatrix3D();
+  rm = toMatrix(rm,qx,qy,qz,qw);
+  applyMatrix(rm);
+  */
+
   rotateZ(yy);//roll
   rotateX(xx);//pitch
   rotateY(zz);//yaw
 
-  box(100, 50, 600);
-  popMatrix();
-  draw_labels();
+  box(200, 200, 200);
   
-  if (isCal)
+  popMatrix();
+}
+
+
+void update_midi()
+{
+
+  //limit update rate  
+  if ((millis() - lastUpdate)>30)
   {
-    calc_call_min_max();
+    lastUpdate = millis();
+    send_midi();
+    send_buttons();
   }
-  else if (isMap)
+}
+
+
+boolean check_timeout()
+{
+  int timeout = 2000;
+  int current_time = millis();
+  if ((current_time - lastSerial) > timeout)
   {
-    //Do nothin...
+    // Clear the buffer, or available() will still be > 0
+    myPort.clear();
+    // Close the port
+      myPort.stop();
+    return false;
+  }
+  else
+    return true;
+}
+
+void draw() 
+{
+  background(0);
+  if (isConnected)
+  {
+    draw_cube();
+    draw_labels();
+  
+    if (isCal)
+    {
+      calc_call_min_max();
+    }
+    else if (isMap)
+    {
+      //Do nothin...
+    }
+    else
+    {
+      update_midi();
+    }
+   
+     isConnected = check_timeout();  
   }
   else
   {
-    //limit update rate  
-    if ((millis() - lastUpdate)>30)
-    {
-      lastUpdate = millis();
-      send_midi();
-      send_buttons();
-    }
+    fill(255,0,0);
+    stroke(255,0,0);
+    line(0,0,width,height);
+    line(width,0,0,height);
+    text("NO CONNECTION",width/2,height/2);
+    isConnected = try_connect_usb_modem();
   }
 }
 
@@ -276,7 +456,7 @@ void serialEvent(Serial myPort) {
     myString = trim(myString);
     float sensors[] = float(split(myString, ':'));
   
-    v1 = sensors[3];
+    v1 = sensors[6];
     if (v1 == 0)
     {
       isLive = false;
@@ -289,13 +469,26 @@ void serialEvent(Serial myPort) {
       isLive = true;
       yy = -sensors[0];
       xx = sensors[1];
-      zz = -sensors[2];      
+      zz = -sensors[2];   
       cx = xx + 10;
       cy = yy + 10;
       cz = zz + 10;
-      v2 = sensors[4];
-      v3 = sensors[5];
-      v4 = sensors[6];  
+      
+      /*
+      qx = sensors[3];
+      qy = sensors[4];
+      qz = sensors[5];
+      qw = sensors[6];
+      */
+      
+      accx = sensors[3];
+      accx = sensors[4];
+      accx = sensors[5];      
+      
+      
+      v2 = sensors[7];
+      v3 = sensors[8];
+      v4 = sensors[9];  
       
       
       if (v2 == 0)
@@ -319,11 +512,14 @@ void serialEvent(Serial myPort) {
     ignorelines--;
   }
   //println("roll: " + xx + " pitch: " + yy + " yaw: " + zz + "\n"); //debug
+  lastSerial = millis();
 
 }
 
-void keyPressed() {
-
+void keyPressed() 
+{
+   if(isConnected)
+   {
     if (key == 'm')
     {
       if (isCal == false)
@@ -379,5 +575,5 @@ void keyPressed() {
         }
       }      
     }
-  
+   }
   }

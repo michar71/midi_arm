@@ -7,6 +7,12 @@
 //#include "BluetoothSerial.h" //Header File for Serial Bluetooth, will be added by default into Arduino
 #include "ButtonClass.h"
 
+
+String devicename = "BABOI";
+int maj_ver = 0;
+int min_ver = 9;
+
+
 //#define DEBUG
 
 //-------------------------------
@@ -19,6 +25,7 @@
 MPU9250 mpu;
 setup_t settings;
 
+bool challenge = false;
 
 //I2C Stuff
 //---------
@@ -33,7 +40,7 @@ setup_t settings;
 #define BUT_C D8
 #define STATUS_LED LED_BUILTIN //Asuming D2 here...
 
-bool isLive = true;
+bool isLive = false;
 int led_state = LOW;    // the current state of LED
 bool but_ctrl_state = false;
 bool but_a_state = false;
@@ -146,36 +153,16 @@ void save_settings()
     settings.mag_scale_z = mpu.getMagScaleZ();
 
     EEPROM.put(0,settings);
-    /*
-    pData = (uint8_t*)&settings;
-
-    for (ii=0;ii<sizeof(setup_t);ii++)
-    {
-        EEPROM.write(ii,*pData);
-        pData++;
-    }
-    */
     EEPROM.commit();
-    //print_settings();
+
 }
 
 void load_settings()
 {
     uint16_t ii;
 
-    EEPROM.get(0,settings);
-    /*
-    uint8_t* pData;
-    pData = (uint8_t*)&settings;
-
-    for (ii=0;ii<sizeof(setup_t);ii++)
-    {
-        *pData = EEPROM.read(ii);
-        pData++;
-    }
-    */
-                  
-#ifndef DEBUG  
+    EEPROM.get(0,settings);       
+#ifdef DEBUG  
     print_settings();    
 #endif
   mpu.setAccBias(settings.acc_bias_x ,settings.acc_bias_y ,settings.acc_bias_z);
@@ -246,10 +233,28 @@ void send_processing_data(bool senddata)
     Serial.print(mpu.getRoll()*DEG_TO_RAD);
     Serial.print(":");
     Serial.print(mpu.getYaw()*DEG_TO_RAD);
+
+/*
+    Serial.print(":");
+    Serial.print(mpu.getQuaternionX());
+    Serial.print(":");
+    Serial.print(mpu.getQuaternionY());
+    Serial.print(":");
+    Serial.print(mpu.getQuaternionZ());
+    Serial.print(":");
+    Serial.print(mpu.getQuaternionW());
+*/
+
+    Serial.print(":");
+    Serial.print(mpu.getLinearAccX());
+    Serial.print(":");
+    Serial.print(mpu.getLinearAccY());
+    Serial.print(":");
+    Serial.print(mpu.getLinearAccZ());           
   }
   else
   {
-    Serial.print("0:0:0");
+    Serial.print("0:0:0:0:0:0");
   }
 
   if (but_ctrl_state)
@@ -310,14 +315,13 @@ void setup()
 
     //Init and test LED's
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
-    setLED(0,0,0,0);
-    delay(200);
+
     setLED(0,64,0,0);
-    delay(400);
+    delay(200);
     setLED(0,0,64,0);
-    delay(400);    
+    delay(200);    
     setLED(0,0,0,64);
-    delay(400);
+    delay(200);
     setLED(0,0,0,0);
 
   #ifdef DEBUG
@@ -339,9 +343,9 @@ void setup()
     load_settings();
     if ((settings.magic0 == 'M') && (settings.magic1 == 'A') && (settings.magic2 == 'G') && (settings.magic3 == 'I') && (settings.magic4 == 'C'))
     {
-      delay(400);
+      delay(120);
       setLED(0,0,64,0);
-      delay(400);
+      delay(120);
       setLED(0,0,0,0);
 
   #ifdef DEBUG
@@ -368,13 +372,42 @@ void setup()
   #ifdef DEBUG
     Serial.println("Setup Done...");
   #endif    
+  setLED(0,64,64,0);
 }
 
+
+void serial_info_request(void)
+{
+  char incomingByte;
+
+  if (Serial.available() > 0) 
+  {
+    // read the incoming byte:
+    incomingByte = Serial.read();
+    if (incomingByte == 'Q')
+    {
+      for (int ii=0;ii<10;ii++)
+      {
+        Serial.print(devicename);
+        Serial.print(":");
+        Serial.print(maj_ver);
+        Serial.print(":");
+        Serial.println(min_ver);
+      }
+      setLED(0,0,0,0);
+      isLive = true;
+      challenge = true;
+    }
+  } 
+}
 
 void loop() 
 {
   //Check Mode button
   mode_button_e button_res;
+
+  serial_info_request();
+
   button_res = but_ctrl.check_button();
   if (SHORT_PRESS == button_res)
   {
@@ -428,12 +461,14 @@ void loop()
 
         if (isLive)
         {
-          send_processing_data(true);
+          if (challenge)
+            send_processing_data(true);
           setLED(1,0,64,0);
         }
         else
         {
-          send_processing_data(false);
+          if (challenge)
+            send_processing_data(false);
           setLED(1,64,0,0);
         }
       }
