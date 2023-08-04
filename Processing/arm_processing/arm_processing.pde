@@ -35,6 +35,13 @@ boolean last_B_state = false;
 boolean last_C_state = false;
 
 boolean isConnected = false;
+boolean splitx = false;
+boolean splity = false;
+boolean splitz = false;
+
+boolean crossx = false;
+boolean crossy = false;
+boolean crossz = false;
 
 int lastUpdate = 0;
 int lastSerial = 0;
@@ -155,12 +162,30 @@ boolean try_connect_usb_modem()
  return false;
 }
 
+void SplitX(boolean theFlag) 
+{
+  splitx = theFlag;
+  save_settings();
+}
 
-      
+void SplitY(boolean theFlag) 
+{
+  splity = theFlag;
+  save_settings();    
+}
+
+void SplitZ(boolean theFlag) 
+{
+  splitz = theFlag;
+  save_settings();   
+}
+
 void setup() {
   size(640, 480,P3D);
   
   cp5 = new ControlP5(this);
+ 
+    load_settings();
   
   // create a new button with name 'buttonA'
   cp5.addButton("Range")
@@ -180,10 +205,37 @@ void setup() {
      .setBroadcast(true)
      ;
   
+    cp5.addToggle("SplitX")
+     .setBroadcast(false)
+     .setValue(splitx)
+     .setPosition(width-110,60)
+     .setSize(18,18)
+     .setLabel("Split X")
+     .setBroadcast(true)
+     ;
+  
+    cp5.addToggle("Splity")
+     .setBroadcast(false)
+     .setValue(splity)
+     .setPosition(width-70,60)
+     .setSize(18,18)
+     .setLabel("Split Y")
+     .setBroadcast(true)
+     ;
+     
+    cp5.addToggle("Splitz")
+     .setBroadcast(false)
+     .setValue(splitz)
+     .setPosition(width-30,60)
+     .setSize(18,18)
+     .setLabel("Split Z")
+     .setBroadcast(true)
+     ;     
+  
   MidiBus.list();
   myBus = new MidiBus(this, -1, "Bus 1"); // Create a new MidiBus with no input device and the default MacOS Midi Distributor as output
    
-  load_settings();
+
   
   smooth();
 }
@@ -219,12 +271,28 @@ void load_settings()
   
   if (json != null)
   {
-    maxx = json.getFloat("maxx");
-    minx = json.getFloat("minx");
-    maxy = json.getFloat("maxy");
-    miny = json.getFloat("miny");
-    maxz = json.getFloat("maxz");
-    minz = json.getFloat("minz");
+    try
+    {
+      maxx = json.getFloat("maxx");
+      minx = json.getFloat("minx");
+      maxy = json.getFloat("maxy");
+      miny = json.getFloat("miny");
+      maxz = json.getFloat("maxz");
+      minz = json.getFloat("minz");
+      crossx = json.getBoolean("crossx");
+      crossx = json.getBoolean("crossx");
+      crossx = json.getBoolean("crossx");
+      splitx = json.getBoolean("splitx");
+      splity = json.getBoolean("splity");
+      splitz = json.getBoolean("splitz");   
+    }
+    
+    catch (Exception e)
+    { //Print the type of error
+      println("Error loading Preset", e);
+      return;  //Tried to connect but no success... Maybe already used?
+    }
+      
   }
 }
 
@@ -238,6 +306,13 @@ void save_settings()
   json.setFloat("miny",miny);
   json.setFloat("maxz",maxz);
   json.setFloat("minz",minz);
+  json.setBoolean("crossx",crossx);
+  json.setBoolean("crossy",crossy);
+  json.setBoolean("crossz",crossz);
+  json.setBoolean("splitx",splitx);  
+  json.setBoolean("splity",splity);    
+  json.setBoolean("splitz",splitz);  
+  
   saveJSONObject(json,"setup.json");
 }
 
@@ -262,6 +337,18 @@ void save_settings()
   }
   
   
+void show_map_text()
+{
+  fill(0);
+  rect(10,height-10,200,height-110);
+  fill(255);
+  text("Mapping Keys:",20,height-90);
+  text("X-Axis=1,Y-Axis=2,Z-Axis=3",20,height-70);
+  text("X-Split=4,Y-Split=5,Z-Split=6",20,height-50);
+  text("Button A=7,Button B=8,Button C=9",20,height-30);
+}
+
+  
 void draw_labels()
 {
   int offsx = 10;
@@ -271,6 +358,8 @@ void draw_labels()
     fill(255,0,0);
   else if (isMap)
      fill(0,255,0);
+
+ 
   else  
     fill(0);
   rect(10,10,140,40);
@@ -278,9 +367,9 @@ void draw_labels()
   text(cx,5+offsx,10+offsy);
   text(cy,5+offsx,20+offsy);
   text(cz,5+offsx,30+offsy);
-  text(minx+"/"+maxx,50+offsx,10+offsy);
-  text(miny+"/"+maxy,50+offsx,20+offsy);
-  text(minz+"/"+maxz,50+offsx,30+offsy);
+  text(nf(minx,0,2)+"/"+nf(maxx,0,2),50+offsx,10+offsy);
+  text(nf(miny,0,2)+"/"+nf(maxy,0,2),50+offsx,20+offsy);
+  text(nf(minz,0,2)+"/"+nf(maxz,0,2),50+offsx,30+offsy);
   
   text(m1,110+offsx,10+offsy);
   text(m2,110+offsx,20+offsy);
@@ -295,7 +384,8 @@ void draw_labels()
   if (b_C_state)
     text("C", 35+offsx,40+offsy);
     
-
+  if (isMap)
+         show_map_text();
   hint(ENABLE_DEPTH_TEST);
 }
 
@@ -316,26 +406,101 @@ int limit(int in, int min, int max)
 
 void send_midi()
 {
-  int channel = 0;
-  int number = 0;
   
-  number = 1;
-  m1 =(int)map(cx,minx, maxx, 0,127);
-  m1 = limit(m1,0,127);
-  ControlChange change1 = new ControlChange(channel, number, m1);
-  myBus.sendControllerChange(change1);
+  if (splitx)
+  {
+      float half = (maxx-minx)/2;
+      int m11 = 0;
+      if (cx < half)
+      {
+        m1 =(int)map(cx,minx, half, 127,0);
+        m1 = limit(m1,0,127);
+        m11 = 0;
+      }
+      else
+      {
+        m11 =(int)map(cx,half, maxx, 0,127);
+        m11 = limit(m11,0,127);
+        m1 = 0;
+      }
+      
+        ControlChange change1 = new ControlChange(0, 1, m1);
+        myBus.sendControllerChange(change1);
+        ControlChange change2 = new ControlChange(0, 4, m11);
+        myBus.sendControllerChange(change2);        
+      
+  }
+  else
+  {
+    m1 =(int)map(cx,minx, maxx, 0,127);
+    m1 = limit(m1,0,127);
+    ControlChange change1 = new ControlChange(0, 1, m1);
+    myBus.sendControllerChange(change1);
+  }
   
-  number = 2;
-  m2 =(int)map(cy,miny, maxy, 0,127);
-  m2 = limit(m2,0,127);
-  ControlChange change2 = new ControlChange(channel, number, m2);
-  myBus.sendControllerChange(change2);
   
-  number = 3;
-  m3 =(int)map(cz,minz, maxz, 0,127);
-  m3 = limit(m3,0,127);  
-  ControlChange change3 = new ControlChange(channel, number, m3);  
-  myBus.sendControllerChange(change3);
+  if (splity)
+  {
+      float half = (maxy-miny)/2;
+      int m22 = 0;
+      if (cy < half)
+      {
+        m2 =(int)map(cy,miny, half, 127,0);
+        m2 = limit(m2,0,127);
+        m22 = 0;
+      }
+      else
+      {
+        m22 =(int)map(cy,half, maxy, 0,127);
+        m22 = limit(m22,0,127);
+        m2 = 0;
+      }
+      
+        ControlChange change1 = new ControlChange(0, 2, m2);
+        myBus.sendControllerChange(change1);
+        ControlChange change2 = new ControlChange(0, 5, m22);
+        myBus.sendControllerChange(change2);        
+      
+  }
+  else
+  {
+    m2 =(int)map(cy,miny, maxy, 0,127);
+    m2 = limit(m2,0,127);
+    ControlChange change1 = new ControlChange(0, 2, m2);
+    myBus.sendControllerChange(change1);
+  }
+  
+  
+  if (splitz)
+  {
+      float half = (maxz-minz)/2;
+      int m33 = 0;
+      if (cz < half)
+      {
+        m3 =(int)map(cz,minz, half, 127,0);
+        m3 = limit(m3,0,127);
+        m33 = 0;
+      }
+      else
+      {
+        m33 =(int)map(cz,half, maxz, 0,127);
+        m33 = limit(m33,0,127);
+        m3 = 0;
+      }
+      
+        ControlChange change1 = new ControlChange(0, 3, m3);
+        myBus.sendControllerChange(change1);
+        ControlChange change2 = new ControlChange(0, 6, m33);
+        myBus.sendControllerChange(change2);        
+      
+  }
+  else
+  {
+    m3 =(int)map(cz,minz, maxz, 0,127);
+    m3 = limit(m3,0,127);
+    ControlChange change1 = new ControlChange(0, 3, m3);
+    myBus.sendControllerChange(change1);
+  }
 }
 
 
@@ -345,42 +510,42 @@ void send_buttons()
   if ((last_A_state == false) && (b_A_state == true))
   {
     last_A_state = b_A_state;
-    ControlChange change1 = new ControlChange(0, 4, 1);
+    ControlChange change1 = new ControlChange(0, 7, 1);
     myBus.sendControllerChange(change1);
   }
 
   else if ((last_A_state == true) && (b_A_state == false))
   {
     last_A_state = b_A_state;
-    ControlChange change1 = new ControlChange(0, 4, 0);
+    ControlChange change1 = new ControlChange(0, 7, 0);
     myBus.sendControllerChange(change1);
   }
 
   if ((last_B_state == false) && (b_B_state == true))
   {
     last_B_state = b_B_state;
-    ControlChange change1 = new ControlChange(0, 5, 1);
+    ControlChange change1 = new ControlChange(0, 8, 1);
     myBus.sendControllerChange(change1);
   }
 
   else if ((last_B_state == true) && (b_B_state == false))
   {
     last_B_state = b_B_state;
-    ControlChange change1 = new ControlChange(0, 5, 0);
+    ControlChange change1 = new ControlChange(0, 8, 0);
     myBus.sendControllerChange(change1);
   }
   
   if ((last_C_state == false) && (b_C_state == true))
   {
     last_C_state = b_C_state;
-    ControlChange change1 = new ControlChange(0, 6, 1);
+    ControlChange change1 = new ControlChange(0, 9, 1);
     myBus.sendControllerChange(change1);
   }
 
   else if ((last_C_state == true) && (b_C_state == false))
   {
     last_C_state = b_C_state;
-    ControlChange change1 = new ControlChange(0, 6, 0);
+    ControlChange change1 = new ControlChange(0, 9, 0);
     myBus.sendControllerChange(change1);
   }  
 }
@@ -493,6 +658,9 @@ void clear_cal_min_max()
   maxy = -65535;
   minz = 65535;
   maxz = -65535;  
+  crossx = false;
+  crossy = false;
+  crossz = false;
 }
 
 void calc_call_min_max()
@@ -509,6 +677,27 @@ void calc_call_min_max()
     minz = cz;
   if (maxz<cz)
     maxz=cz;
+    
+    
+  //Zero Crossover Detection
+  if (((minx < -3.12) || (maxx > 3.12)) && (crossx == false))
+  {
+    crossx = true;
+    minx = 65535;
+    maxx = -65535;  
+  }
+  if (((miny < -3.12) || (maxy > 3.12)) && (crossy == false))
+  {
+    crossy = true;
+    miny = 65535;
+    maxy = -65535;  
+  }  
+  if (((minz < -3.12) || (maxz > 3.12)) && (crossz == false))
+  {
+    crossz = true;
+    minz = 65535;
+    maxz = -65535;  
+  }
     
 }
 
@@ -547,12 +736,31 @@ void serialEvent(Serial myPort) {
     else
     {
       isLive = true;
-      yy = -sensors[0];
+      yy = sensors[0];
       xx = sensors[1];
       zz = -sensors[2];   
-      cx = xx + 10;
-      cy = yy + 10;
-      cz = zz + 10;
+      cx = xx;
+      cy = yy;
+      cz = zz;
+
+
+      if (crossx)
+      {
+        if (cx < 0)
+          cx = cx + 2*PI;
+      }   
+      
+      if (crossy)
+      {
+        if (cy < 0)
+          cy = cy + 2*PI;
+      }   
+      
+      if (crossz)
+      {
+        if (cz < 0)
+          cz = cz + 2*PI;
+      }
       
       /*
       qx = sensors[3];
@@ -637,11 +845,26 @@ void keyPressed()
       {
           ControlChange change1 = new ControlChange(0, 6, 1);
           myBus.sendControllerChange(change1);
-      }        
+      }       
+      if (key =='7')
+      {
+          ControlChange change1 = new ControlChange(0, 7, 1);
+          myBus.sendControllerChange(change1);
+      }
+      if (key =='8')
+      {
+          ControlChange change1 = new ControlChange(0, 8, 1);
+          myBus.sendControllerChange(change1);
+      }
+      if (key =='9')
+      {
+          ControlChange change1 = new ControlChange(0, 9, 1);
+          myBus.sendControllerChange(change1);
+      }          
     }
     else
     {
-      if (key == 'c')
+      if (key == 'r')
       {
         if (isCal)
         {
