@@ -25,6 +25,10 @@ MidiBus myBus; // The MidiBus
 int m1 = 0;
 int m2 = 0;
 int m3 = 0;
+int m11 = 0;
+int m22 = 0;
+int m33 = 0;
+
 int ignorelines = 0;
 boolean isLive = true;
 boolean b_A_state = false;
@@ -48,7 +52,7 @@ int lastSerial = 0;
 
 int min_ver = 0;
 int maj_ver = 0;
-String deviceName = "";
+String deviceName = "UNKNOWN";
 boolean isValidDevice=false;
 
 boolean get_usbmodem_list(ArrayList<String> list)
@@ -162,19 +166,19 @@ boolean try_connect_usb_modem()
  return false;
 }
 
-void SplitX(boolean theFlag) 
+void Splitx(boolean theFlag) 
 {
   splitx = theFlag;
   save_settings();
 }
 
-void SplitY(boolean theFlag) 
+void Splity(boolean theFlag) 
 {
   splity = theFlag;
   save_settings();    
 }
 
-void SplitZ(boolean theFlag) 
+void Splitz(boolean theFlag) 
 {
   splitz = theFlag;
   save_settings();   
@@ -205,7 +209,7 @@ void setup() {
      .setBroadcast(true)
      ;
   
-    cp5.addToggle("SplitX")
+    cp5.addToggle("Splitx")
      .setBroadcast(false)
      .setValue(splitx)
      .setPosition(width-110,60)
@@ -280,8 +284,8 @@ void load_settings()
       maxz = json.getFloat("maxz");
       minz = json.getFloat("minz");
       crossx = json.getBoolean("crossx");
-      crossx = json.getBoolean("crossx");
-      crossx = json.getBoolean("crossx");
+      crossy = json.getBoolean("crossy");
+      crossz = json.getBoolean("crossz");
       splitx = json.getBoolean("splitx");
       splity = json.getBoolean("splity");
       splitz = json.getBoolean("splitz");   
@@ -355,14 +359,13 @@ void draw_labels()
   int offsy = 10;
   hint(DISABLE_DEPTH_TEST);
   if (isCal)
-    fill(255,0,0);
+    fill(128,0,0);
   else if (isMap)
-     fill(0,255,0);
-
- 
+     fill(0,128,0); 
   else  
     fill(0);
-  rect(10,10,140,40);
+    
+  rect(10,10,140,50);
   fill(255);
   text(cx,5+offsx,10+offsy);
   text(cy,5+offsx,20+offsy);
@@ -371,10 +374,22 @@ void draw_labels()
   text(nf(miny,0,2)+"/"+nf(maxy,0,2),50+offsx,20+offsy);
   text(nf(minz,0,2)+"/"+nf(maxz,0,2),50+offsx,30+offsy);
   
-  text(m1,110+offsx,10+offsy);
-  text(m2,110+offsx,20+offsy);
-  text(m3,110+offsx,30+offsy);
+  if (splitx)
+    text(m1+"/"+m11,110+offsx,10+offsy);
+  else
+    text(m1,110+offsx,10+offsy);
+    
+  if (splity)  
+    text(m2+"/"+m22,110+offsx,20+offsy);
+  else
+    text(m2,110+offsx,20+offsy);
   
+  if (splitz)
+    text(m3+"/"+m33,110+offsx,30+offsy);  
+  else
+    text(m3,110+offsx,30+offsy);  
+      
+      
   if (b_A_state)
     text("A", 5+offsx,40+offsy);
   
@@ -383,6 +398,9 @@ void draw_labels()
     
   if (b_C_state)
     text("C", 35+offsx,40+offsy);
+    
+  text(deviceName+" V"+maj_ver+"."+min_ver, 5+offsx,50+offsy);  
+
     
   if (isMap)
          show_map_text();
@@ -409,8 +427,7 @@ void send_midi()
   
   if (splitx)
   {
-      float half = (maxx-minx)/2;
-      int m11 = 0;
+      float half = map(50,0,100, minx,maxx);
       if (cx < half)
       {
         m1 =(int)map(cx,minx, half, 127,0);
@@ -423,7 +440,7 @@ void send_midi()
         m11 = limit(m11,0,127);
         m1 = 0;
       }
-      
+        println(half+":"+cx+":"+minx+":"+maxx+":"+m1+":"+m11);
         ControlChange change1 = new ControlChange(0, 1, m1);
         myBus.sendControllerChange(change1);
         ControlChange change2 = new ControlChange(0, 4, m11);
@@ -432,6 +449,7 @@ void send_midi()
   }
   else
   {
+    m11 = 0;
     m1 =(int)map(cx,minx, maxx, 0,127);
     m1 = limit(m1,0,127);
     ControlChange change1 = new ControlChange(0, 1, m1);
@@ -441,8 +459,7 @@ void send_midi()
   
   if (splity)
   {
-      float half = (maxy-miny)/2;
-      int m22 = 0;
+      float half = map(50,0,100, miny,maxy);
       if (cy < half)
       {
         m2 =(int)map(cy,miny, half, 127,0);
@@ -464,6 +481,7 @@ void send_midi()
   }
   else
   {
+    m22 = 0;
     m2 =(int)map(cy,miny, maxy, 0,127);
     m2 = limit(m2,0,127);
     ControlChange change1 = new ControlChange(0, 2, m2);
@@ -473,8 +491,8 @@ void send_midi()
   
   if (splitz)
   {
-      float half = (maxz-minz)/2;
-      int m33 = 0;
+      float half = map(50,0,100, minz,maxz);
+
       if (cz < half)
       {
         m3 =(int)map(cz,minz, half, 127,0);
@@ -496,6 +514,7 @@ void send_midi()
   }
   else
   {
+    m33= 0;
     m3 =(int)map(cz,minz, maxz, 0,127);
     m3 = limit(m3,0,127);
     ControlChange change1 = new ControlChange(0, 3, m3);
@@ -634,7 +653,8 @@ void draw()
     }
     else
     {
-      update_midi();
+      if (isConnected)
+        update_midi();
     }
    
      isConnected = check_timeout();  
@@ -680,19 +700,19 @@ void calc_call_min_max()
     
     
   //Zero Crossover Detection
-  if (((minx < -3.12) || (maxx > 3.12)) && (crossx == false))
+  if (((minx <= -3.1) || (maxx >+ 3.1)) && (crossx == false))
   {
     crossx = true;
     minx = 65535;
     maxx = -65535;  
   }
-  if (((miny < -3.12) || (maxy > 3.12)) && (crossy == false))
+  if (((miny <+ -3.1) || (maxy >= 3.1)) && (crossy == false))
   {
     crossy = true;
     miny = 65535;
     maxy = -65535;  
   }  
-  if (((minz < -3.12) || (maxz > 3.12)) && (crossz == false))
+  if (((minz <= -3.1) || (maxz >= 3.1)) && (crossz == false))
   {
     crossz = true;
     minz = 65535;
