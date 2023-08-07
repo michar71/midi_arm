@@ -3,12 +3,12 @@
   "crossx": false,
   "crossy": false,
   "miny": -0.7099999785423279,
-  "splitx": true,
+  "splitx": false,
   "minx": -1.2599999904632568,
   "maxz": 4.063185691833496,
-  "splity": true,
+  "splity": false,
   "maxy": 1.1799999475479126,
   "maxx": 0.5899999737739563,
-  "splitz": true,
+  "splitz": false,
   "minz": 1.4600000381469727
 }

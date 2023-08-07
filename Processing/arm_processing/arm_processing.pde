@@ -8,6 +8,7 @@ import java.lang.*;
 import java.util.*;
 import controlP5.*;
 
+
 ControlP5 cp5;
 
 Serial myPort;                  // The serial port
@@ -21,6 +22,7 @@ float minx,maxx,miny,maxy,minz,maxz;
 boolean isCal;
 boolean isMap;
 MidiBus myBus; // The MidiBus
+
 
 int m1 = 0;
 int m2 = 0;
@@ -54,6 +56,8 @@ int min_ver = 0;
 int maj_ver = 0;
 String deviceName = "UNKNOWN";
 boolean isValidDevice=false;
+
+
 
 boolean get_usbmodem_list(ArrayList<String> list)
 {
@@ -352,7 +356,17 @@ void show_map_text()
   text("Button A=7,Button B=8,Button C=9",20,height-30);
 }
 
-  
+
+void show_acceleration()
+{
+  int r = (int)map(accx,-4,4,64,255);
+  int g = (int)map(accy,-4,4,64,255);
+  int b = (int)map(accz+1,-4,4,64,255);
+  stroke(r,g,b);
+  fill(r,g,b);
+}
+
+
 void draw_labels()
 {
   int offsx = 10;
@@ -404,6 +418,8 @@ void draw_labels()
     
   if (isMap)
          show_map_text();
+         
+  show_acceleration();
   hint(ENABLE_DEPTH_TEST);
 }
 
@@ -440,7 +456,6 @@ void send_midi()
         m11 = limit(m11,0,127);
         m1 = 0;
       }
-        println(half+":"+cx+":"+minx+":"+maxx+":"+m1+":"+m11);
         ControlChange change1 = new ControlChange(0, 1, m1);
         myBus.sendControllerChange(change1);
         ControlChange change2 = new ControlChange(0, 4, m11);
@@ -586,9 +601,11 @@ void draw_cube()
   applyMatrix(rm);
   */
 
-  rotateZ(yy);//roll
-  rotateX(xx);//pitch
   rotateY(zz);//yaw
+  rotateX(xx);//pitch
+  rotateZ(yy);//roll
+
+
 
   box(200, 200, 200);
   
@@ -790,8 +807,8 @@ void serialEvent(Serial myPort) {
       */
       
       accx = sensors[3];
-      accx = sensors[4];
-      accx = sensors[5];      
+      accy = sensors[4];
+      accz = sensors[5];   
       
       
       v2 = sensors[7];
