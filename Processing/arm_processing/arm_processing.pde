@@ -201,7 +201,8 @@ void setup() {
   prepareExitHandler();
  
     load_settings();
-    surface.setLocation(winx, winy);
+    //setLocation(winx, winy);
+    
   
   // create a new button with name 'buttonA'
   cp5.addButton("Range")
@@ -664,6 +665,11 @@ boolean check_timeout()
 
 void draw() 
 {
+  if(1==frameCount) 
+  {
+     surface.setLocation(winx,winy-28); //That '28' is the height of the menu bar... Ugly fudge but apparently hard to fix...
+  }
+  
   if (isLive)
     background(0);
   else
@@ -688,7 +694,7 @@ void draw()
     }
     else
     {
-      if (isConnected)
+      if ((isConnected) && (isLive))
         update_midi();
     }
    
