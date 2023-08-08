@@ -7,6 +7,7 @@ import themidibus.*; //Import the library
 import java.lang.*;
 import java.util.*;
 import controlP5.*;
+import com.jogamp.newt.opengl.GLWindow;
 
 
 ControlP5 cp5;
@@ -51,6 +52,8 @@ boolean crossz = false;
 
 int lastUpdate = 0;
 int lastSerial = 0;
+int winx;
+int winy;
 
 int min_ver = 0;
 int maj_ver = 0;
@@ -189,11 +192,16 @@ void Splitz(boolean theFlag)
 }
 
 void setup() {
-  size(640, 480,P3D);
+  size(400, 260,P3D);
+  surface.setTitle("BABOI CONTROL");
+  surface.setResizable(false);
+  
   
   cp5 = new ControlP5(this);
+  prepareExitHandler();
  
     load_settings();
+    surface.setLocation(winx, winy);
   
   // create a new button with name 'buttonA'
   cp5.addButton("Range")
@@ -293,6 +301,8 @@ void load_settings()
       splitx = json.getBoolean("splitx");
       splity = json.getBoolean("splity");
       splitz = json.getBoolean("splitz");   
+      winx = json.getInt("winx");        
+      winy = json.getInt("winy");      
     }
     
     catch (Exception e)
@@ -320,6 +330,8 @@ void save_settings()
   json.setBoolean("splitx",splitx);  
   json.setBoolean("splity",splity);    
   json.setBoolean("splitz",splitz);  
+  json.setInt("winx",winx);  
+  json.setInt("winy",winy);  
   
   saveJSONObject(json,"setup.json");
 }
@@ -347,13 +359,14 @@ void save_settings()
   
 void show_map_text()
 {
-  fill(0);
-  rect(10,height-10,200,height-110);
+  //fill(0);
+  //rect(10,height-10,200,height-110);
   fill(255);
-  text("Mapping Keys:",20,height-90);
-  text("X-Axis=1,Y-Axis=2,Z-Axis=3",20,height-70);
-  text("X-Split=4,Y-Split=5,Z-Split=6",20,height-50);
-  text("Button A=7,Button B=8,Button C=9",20,height-30);
+  textAlign(LEFT);
+  text("Mapping Keys:",20,height-80);
+  text("X-Axis=1,Y-Axis=2,Z-Axis=3",20,height-60);
+  text("X-Split=4,Y-Split=5,Z-Split=6",20,height-40);
+  text("Button A=7,Button B=8,Button C=9",20,height-20);
 }
 
 
@@ -369,51 +382,56 @@ void show_acceleration()
 
 void draw_labels()
 {
-  int offsx = 10;
-  int offsy = 10;
+
   hint(DISABLE_DEPTH_TEST);
   if (isCal)
+  {
     fill(128,0,0);
+    rect(0,0,160,66);
+  }
   else if (isMap)
-     fill(0,128,0); 
-  else  
-    fill(0);
-    
-  rect(10,10,140,50);
+  {
+    fill(0,128,0);
+    rect(0,0,160,66);     
+  }
+
   fill(255);
-  text(cx,5+offsx,10+offsy);
-  text(cy,5+offsx,20+offsy);
-  text(cz,5+offsx,30+offsy);
-  text(nf(minx,0,2)+"/"+nf(maxx,0,2),50+offsx,10+offsy);
-  text(nf(miny,0,2)+"/"+nf(maxy,0,2),50+offsx,20+offsy);
-  text(nf(minz,0,2)+"/"+nf(maxz,0,2),50+offsx,30+offsy);
+  
+  textAlign(LEFT);
+  textSize(14);
+  text(nf(cx,0,2),5,10);
+  text(nf(cy,0,2),5,22);
+  text(nf(cz,0,2),5,34);
+  text(nf(minx,0,2)+"/"+nf(maxx,0,2),50,10);
+  text(nf(miny,0,2)+"/"+nf(maxy,0,2),50,22);
+  text(nf(minz,0,2)+"/"+nf(maxz,0,2),50,34);
   
   if (splitx)
-    text(m1+"/"+m11,110+offsx,10+offsy);
+    text(m1+"/"+m11,120,10);
   else
-    text(m1,110+offsx,10+offsy);
+    text(m1,120,10);
     
   if (splity)  
-    text(m2+"/"+m22,110+offsx,20+offsy);
+    text(m2+"/"+m22,120,22);
   else
-    text(m2,110+offsx,20+offsy);
+    text(m2,120,22);
   
   if (splitz)
-    text(m3+"/"+m33,110+offsx,30+offsy);  
+    text(m3+"/"+m33,120,34);  
   else
-    text(m3,110+offsx,30+offsy);  
+    text(m3,120,34);  
       
       
   if (b_A_state)
-    text("A", 5+offsx,40+offsy);
+    text("A", 5,46);
   
   if (b_B_state)
-    text("B", 20+offsx,40+offsy);
+    text("B", 20,46);
     
   if (b_C_state)
-    text("C", 35+offsx,40+offsy);
+    text("C", 35,46);
     
-  text(deviceName+" V"+maj_ver+"."+min_ver, 5+offsx,50+offsy);  
+  text(deviceName+" V"+maj_ver+"."+min_ver, 5,58);  
 
     
   if (isMap)
@@ -607,7 +625,7 @@ void draw_cube()
 
 
 
-  box(200, 200, 200);
+  box(100, 100, 100);
   
   popMatrix();
 
@@ -685,6 +703,10 @@ void draw()
     text("NO CONNECTION",width/2,height/2);
     isConnected = try_connect_usb_modem();
   }
+  
+    GLWindow glw = (GLWindow)surface.getNative();
+    winx = glw.getX();
+    winy = glw.getY();
 }
 
 void clear_cal_min_max()
@@ -916,4 +938,17 @@ void keyPressed()
       }      
     }
    }
+}
+   
+private void prepareExitHandler () 
+{
+
+Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() 
+{
+  public void run () 
+  {
+    System.out.println("SHUTDOWN HOOK");
+    save_settings();
   }
+}));
+}
