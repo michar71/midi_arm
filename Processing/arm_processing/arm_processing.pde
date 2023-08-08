@@ -556,10 +556,46 @@ void send_midi()
   }
 }
 
-
+//Button apparently are on/off...
 void send_buttons()
 {
-
+  if ((last_A_state == false) && (b_A_state == true))
+  {
+    ControlChange change = new ControlChange(0, 7, 127);
+    myBus.sendControllerChange(change);   
+    change = new ControlChange(0, 7, 0);
+    myBus.sendControllerChange(change);    
+  }  
+  last_A_state = b_A_state;
+  
+  if ((last_B_state == false) && (b_B_state == true))
+  {
+    ControlChange change = new ControlChange(0, 8, 127);
+    myBus.sendControllerChange(change);   
+    change = new ControlChange(0, 8, 0);
+    myBus.sendControllerChange(change);    
+  }  
+  last_B_state = b_B_state;
+  
+  if ((last_C_state == false) && (b_C_state == true))
+  {
+    ControlChange change = new ControlChange(0, 8, 127);
+    myBus.sendControllerChange(change);   
+    change = new ControlChange(0, 8, 0);
+    myBus.sendControllerChange(change);    
+  }  
+  last_C_state = b_C_state;  
+  
+ /* 
+  if (a_active == true)
+     val = 127;
+  else
+     val = 0;
+    
+  ControlChange change = new ControlChange(0, 7, val);
+  myBus.sendControllerChange(change);
+  */
+/*  
   if ((last_A_state == false) && (b_A_state == true))
   {
     last_A_state = b_A_state;
@@ -601,6 +637,7 @@ void send_buttons()
     ControlChange change1 = new ControlChange(0, 9, 0);
     myBus.sendControllerChange(change1);
   }  
+*/  
 }
 
 
